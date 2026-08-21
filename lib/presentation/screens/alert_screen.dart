@@ -45,7 +45,7 @@ class _AlertScreenState extends State<AlertScreen> {
   void _playEmergencySiren() async {
     try {
       await _audioPlayer.setReleaseMode(ReleaseMode.loop); 
-      await _audioPlayer.play(AssetSource('alert.mp3')); 
+      await _audioPlayer.play(AssetSource('sounds/alert.mp3')); 
     } catch (e) {
       print("Siren playback error: $e");
     }

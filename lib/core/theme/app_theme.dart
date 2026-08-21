@@ -15,8 +15,9 @@ class AppTheme {
       appBarTheme: const AppBarTheme(
         backgroundColor: AppConstants.primaryDark,
         elevation: 0,
-        centerTitle: true,
-        titleTextStyle: AppConstants.titleStyle,
+        centerTitle: true,        
+        titleTextStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFF5F5F5), letterSpacing: 1.2),
+
       ),
 
       // Global Elevated Button Configuration
