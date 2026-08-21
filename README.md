@@ -93,7 +93,7 @@ We believe safety is a human right. We highly encourage developers, engineers, a
 
 ## ✍️ Author & Visionary
 
-- ** [Yağız Yağlı /@yagizyagli](https://github.com/yagizyagli)
+- [Yağız Yağlı /@yagizyagli](https://github.com/yagizyagli)
 - **The Vision:** This project was born out of a pure social responsibility mindset to secure human lives on the road. It is built to stand as a shield for delivery riders, motorcyclists, and commuters worldwide—completely non-commercial, non-profit, and powered by the global developer community.
 
 > *"We don't build software for profit; we build shields to bring fathers, mothers, and friends back home safely."*
