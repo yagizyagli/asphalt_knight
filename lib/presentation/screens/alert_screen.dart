@@ -5,16 +5,13 @@ import '../../data/datasources/local_storage.dart';
 import '../../data/services/location_service.dart';
 import '../../data/services/sms_service.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class AlertScreen extends StatefulWidget {
   final bool isMotorMode;
   final String emergencyNumber;
 
-  const AlertScreen({
-    super.key, 
-    required this.isMotorMode, 
-    required this.emergencyNumber
-  });
+  const AlertScreen({super.key, required this.isMotorMode, required this.emergencyNumber});
 
   @override
   State<AlertScreen> createState() => _AlertScreenState();
@@ -24,6 +21,7 @@ class _AlertScreenState extends State<AlertScreen> {
   final LocationService _locationService = LocationService();
   final SmsService _smsService = SmsService();
   final LocalStorage _storage = LocalStorage();
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   int _countdown = AppConstants.countdownDurationSeconds;
   Timer? _timer;
@@ -34,24 +32,29 @@ class _AlertScreenState extends State<AlertScreen> {
   void initState() {
     super.initState();
     _loadLanguage();
+    _playEmergencySiren(); 
     _startCountdown();
   }
 
   void _loadLanguage() async {
     String? lang = await _storage.getLanguagePreference();
-    if (lang != null) {
-      setState(() {
-        _isTurkish = lang == 'tr';
-      });
+    if (lang != null) { setState(() { _isTurkish = lang == 'tr'; }); }
+  }
+
+
+  void _playEmergencySiren() async {
+    try {
+      await _audioPlayer.setReleaseMode(ReleaseMode.loop); 
+      await _audioPlayer.play(AssetSource('sounds/alert.mp3')); 
+    } catch (e) {
+      print("Siren playback error: $e");
     }
   }
 
   void _startCountdown() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown > 1) {
-        setState(() {
-          _countdown--;
-        });
+        setState(() { _countdown--; });
       } else {
         _timer?.cancel();
         _sendEmergencyAlert();
@@ -63,14 +66,12 @@ class _AlertScreenState extends State<AlertScreen> {
     if (_isDispatched) return;
     setState(() { _isDispatched = true; });
 
-    // 1. Fetch precise GPS coordinates
+    _audioPlayer.stop(); 
+
     Position? currentPos = await _locationService.getCurrentLocation();
-    
-    // Fallback coordinates if GPS timeout occurs (to guarantee message delivery)
     double lat = currentPos?.latitude ?? 0.0;
     double log = currentPos?.longitude ?? 0.0;
 
-    // 2. Dispatch the automated SMS via native device transceiver
     await _smsService.sendEmergencySms(
       contactNumber: widget.emergencyNumber,
       latitude: lat,
@@ -80,18 +81,8 @@ class _AlertScreenState extends State<AlertScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.green,
-          content: Text(_isTurkish ? "SOS Mesajı Başarıyla Gönderildi!" : "SOS Dispatch Sent Successfully!"),
-        ),
+        SnackBar(backgroundColor: Colors.green, content: Text(_isTurkish ? "SOS Mesajı Gönderildi!" : "SOS Dispatch Sent!")),
       );
-      Navigator.pop(context); // Return safely to Dashboard
-    }
-  }
-
-  void _cancelAlert() {
-    _timer?.cancel();
-    if (mounted) {
       Navigator.pop(context);
     }
   }
@@ -99,6 +90,7 @@ class _AlertScreenState extends State<AlertScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _audioPlayer.dispose(); 
     super.dispose();
   }
 
@@ -115,21 +107,8 @@ class _AlertScreenState extends State<AlertScreen> {
             children: [
               const Icon(Icons.warning_amber_rounded, size: 100, color: AppConstants.textLight),
               const SizedBox(height: 24),
-              Text(
-                _isTurkish ? "CRASH DETECTED!" : "KAZA ALGILANDI!",
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppConstants.textLight),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _isTurkish 
-                  ? "Sistem otomatik olarak acil durum mesajı gönderecek." 
-                  : "System will automatically dispatch an emergency distress message.",
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, color: AppConstants.textLight),
-              ),
+              Text(_isTurkish ? "KAZA ALGILANDI!" : "CRASH DETECTED!", textAlign: TextAlign.center, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppConstants.textLight)),
               const Spacer(),
-              // Countdown Dynamic Radial UI Effect
               Center(
                 child: Stack(
                   alignment: Alignment.center,
@@ -143,26 +122,19 @@ class _AlertScreenState extends State<AlertScreen> {
                         valueColor: const AlwaysStoppedAnimation<Color>(AppConstants.textLight),
                       ),
                     ),
-                    Text(
-                      "$_countdown",
-                      style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: AppConstants.textLight),
-                    ),
+                    Text("$_countdown", style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: AppConstants.textLight)),
                   ],
                 ),
               ),
               const Spacer(),
-              // Big I'M OK Cancel Button
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.textLight,
-                  foregroundColor: AppConstants.emergencyRed,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                ),
-                onPressed: _cancelAlert,
-                child: Text(
-                  _isTurkish ? "BEN İYİYİM (İPTAL ET)" : "I AM OK (CANCEL SOS)",
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+                style: ElevatedButton.styleFrom(backgroundColor: AppConstants.textLight, foregroundColor: AppConstants.emergencyRed, padding: const EdgeInsets.symmetric(vertical: 20)),
+                onPressed: () { 
+                  _timer?.cancel(); 
+                  _audioPlayer.stop(); 
+                  Navigator.pop(context); 
+                },
+                child: Text(_isTurkish ? "BEN İYİYİM (İPTAL ET)" : "I AM OK (CANCEL SOS)", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
