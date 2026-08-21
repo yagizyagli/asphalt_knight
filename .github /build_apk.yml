@@ -25,31 +25,6 @@ jobs:
       - name: Install App Dependencies
         run: flutter pub get
 
-      - name: Direct Injection Patch for Telephony Legacy Error
-        run: |
-          TARGET_FILE="${HOME}/.pub-cache/hosted/pub.dev/telephony-0.2.0/android/build.gradle"
-          
-          if [ -f "$TARGET_FILE" ]; then
-            echo "Target file found at: $TARGET_FILE"
-            
-            if grep -q "namespace " "$TARGET_FILE"; then
-              echo "Namespace already exists, skipping..."
-            else
-              echo "Injecting namespace into telephony build.gradle..."
-              sed -i '/android {/a \    namespace "com.shounakmulay.telephony"' "$TARGET_FILE"
-              echo "Injection successful!"
-            fi
-          else
-            echo "File not found at primary path, searching dynamically..."
-            GENERIC_PATH=$(find ${HOME}/.pub-cache/hosted/pub.dev/ -name "build.gradle" | grep "telephony")
-            if [ -n "$GENERIC_PATH" ]; then
-              sed -i '/android {/a \    namespace "com.shounakmulay.telephony"' "$GENERIC_PATH"
-              echo "Dynamic injection successful on: $GENERIC_PATH"
-            else
-              echo "Warning: Telephony build file could not be located."
-            fi
-          fi
-
       - name: Build Android Release APK
         run: flutter build apk --release
 

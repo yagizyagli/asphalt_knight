@@ -1,10 +1,7 @@
-import 'package:telephony/telephony.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-/// Service responsible for sending automated emergency SMS dispatches.
 class SmsService {
-  final Telephony _telephony = Telephony.instance;
-
-  /// Sends background emergency SMS to the designated contact number.
+  /// Launches native device SMS app with pre-filled emergency payload.
   Future<bool> sendEmergencySms({
     required String contactNumber, 
     required double latitude, 
@@ -12,19 +9,28 @@ class SmsService {
     required bool isTurkish,
   }) async {
     try {
-      // Localization handling inside data service for emergency reliability
       String message = isTurkish 
-        ? "ACİL DURUM: Yakınım bir motosiklet kazası geçirdi! Güncel konumu: https://google.com"
-        : "EMERGENCY: My contact has been involved in a motorcycle accident! Current location: https://google.com";
+        ? "ACIL DURUM: Yakinim bir kaza gecirdi! Guncel konumu: https://google.com"
+        : "EMERGENCY: My contact has been involved in an accident! Current location: https://google.com";
 
-      // Direct background SMS send without opening default SMS app
-      await _telephony.sendSms(
-        to: contactNumber,
-        message: message,
+      // Native compliant universal SMS intent URI
+      final Uri smsUri = Uri(
+        scheme: 'sms',
+        path: contactNumber,
+        queryParameters: <String, String>{
+          'body': message,
+        },
       );
-      return true;
+
+      if (await canLaunchUrl(smsUri)) {
+        await launchUrl(smsUri, mode: LaunchMode.externalApplication);
+        return true;
+      } else {
+        print("Could not launch SMS native intent");
+        return false;
+      }
     } catch (e) {
-      print("SMS Dispatch Failed: $e");
+      print("SMS Intent Launch Failed: $e");
       return false;
     }
   }
