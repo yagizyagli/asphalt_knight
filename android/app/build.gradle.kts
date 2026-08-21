@@ -47,3 +47,21 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+
+subprojects {
+    afterEvaluate {
+        val extension = extensions.findByName("android")
+        if (extension != null) {
+            val baseExtension = extension as? com.android.build.gradle.BaseExtension
+            if (baseExtension != null && baseExtension.namespace == null) {
+                if (name == "telephony") {
+                    baseExtension.namespace = "com.shounakmulay.telephony"
+                } else {
+                    baseExtension.namespace = "com.example.$name"
+                }
+            }
+        }
+    }
+}
+
