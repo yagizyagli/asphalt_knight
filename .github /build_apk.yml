@@ -25,6 +25,18 @@ jobs:
       - name: Install App Dependencies
         run: flutter pub get
 
+      - name: Patch Telephony Namespace Error (Fixing Legacy Dependency)
+        run: |
+          PUB_CACHE_DIR="${HOME}/.pub-cache/hosted/pub.dev"
+          TELEPHONY_DIR=$(find $PUB_CACHE_DIR -type d -name "telephony-*" 2>/dev/null | head -n 1)
+          if [ -d "$TELEPHONY_DIR" ]; then
+            BUILD_GRADLE="${TELEPHONY_DIR}/android/build.gradle"
+            if [ -f "$BUILD_GRADLE" ]; then
+              echo "Patching legacy telephony build.gradle..."
+              sed -i '/android {/a \    namespace "com.shounakmulay.telephony"' "$BUILD_GRADLE"
+            fi
+          fi
+
       - name: Build Android Release APK
         run: flutter build apk --release
 
