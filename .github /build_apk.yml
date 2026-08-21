@@ -25,16 +25,32 @@ jobs:
       - name: Install App Dependencies
         run: flutter pub get
 
-      - name: Patch Telephony Namespace Error (Fixing Legacy Dependency)
+      - name: Force Patch Telephony Namespace (Legacy Fix)
         run: |
+          # Flutter'ın indirdiği paketlerin ana yoluna doğrudan gidiyoruz
           PUB_CACHE_DIR="${HOME}/.pub-cache/hosted/pub.dev"
-          TELEPHONY_DIR=$(find $PUB_CACHE_DIR -type d -name "telephony-*" 2>/dev/null | head -n 1)
-          if [ -d "$TELEPHONY_DIR" ]; then
-            BUILD_GRADLE="${TELEPHONY_DIR}/android/build.gradle"
-            if [ -f "$BUILD_GRADLE" ]; then
-              echo "Patching legacy telephony build.gradle..."
-              sed -i '/android {/a \    namespace "com.shounakmulay.telephony"' "$BUILD_GRADLE"
+          
+          # Hangi sürüm olursa olsun telephony klasörünü nokta atışı buluyoruz
+          TELEPHONY_PATH=$(find $PUB_CACHE_DIR -maxdepth 2 -type d -name "telephony-*" | head -n 1)
+          
+          if [ -n "$TELEPHONY_PATH" ]; then
+            TARGET_GRADLE="${TELEPHONY_PATH}/android/build.gradle"
+            if [ -f "$TARGET_GRADLE" ]; then
+              echo "Found telephony build.gradle at: $TARGET_GRADLE"
+              echo "Applying aggressive namespace patch..."
+              
+              # build.gradle dosyasının içine girip android { satırının hemen altına namespace ekliyoruz
+              sed -i '/android {/a \    namespace "com.shounakmulay.telephony"' "$TARGET_GRADLE"
+              
+              echo "Patch applied successfully. Verifying content:"
+              cat "$TARGET_GRADLE" | grep "namespace"
+            else
+              echo "Error: build.gradle not found inside telephony directory!"
+              exit 1
             fi
+          else
+            echo "Error: Telephony package package could not be found in cache!"
+            exit 1
           fi
 
       - name: Build Android Release APK
