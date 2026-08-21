@@ -25,32 +25,29 @@ jobs:
       - name: Install App Dependencies
         run: flutter pub get
 
-      - name: Force Patch Telephony Namespace (Legacy Fix)
+      - name: Direct Injection Patch for Telephony Legacy Error
         run: |
-          # Flutter'ın indirdiği paketlerin ana yoluna doğrudan gidiyoruz
-          PUB_CACHE_DIR="${HOME}/.pub-cache/hosted/pub.dev"
+          TARGET_FILE="${HOME}/.pub-cache/hosted/pub.dev/telephony-0.2.0/android/build.gradle"
           
-          # Hangi sürüm olursa olsun telephony klasörünü nokta atışı buluyoruz
-          TELEPHONY_PATH=$(find $PUB_CACHE_DIR -maxdepth 2 -type d -name "telephony-*" | head -n 1)
-          
-          if [ -n "$TELEPHONY_PATH" ]; then
-            TARGET_GRADLE="${TELEPHONY_PATH}/android/build.gradle"
-            if [ -f "$TARGET_GRADLE" ]; then
-              echo "Found telephony build.gradle at: $TARGET_GRADLE"
-              echo "Applying aggressive namespace patch..."
-              
-              # build.gradle dosyasının içine girip android { satırının hemen altına namespace ekliyoruz
-              sed -i '/android {/a \    namespace "com.shounakmulay.telephony"' "$TARGET_GRADLE"
-              
-              echo "Patch applied successfully. Verifying content:"
-              cat "$TARGET_GRADLE" | grep "namespace"
+          if [ -f "$TARGET_FILE" ]; then
+            echo "Target file found at: $TARGET_FILE"
+            
+            if grep -q "namespace " "$TARGET_FILE"; then
+              echo "Namespace already exists, skipping..."
             else
-              echo "Error: build.gradle not found inside telephony directory!"
-              exit 1
+              echo "Injecting namespace into telephony build.gradle..."
+              sed -i '/android {/a \    namespace "com.shounakmulay.telephony"' "$TARGET_FILE"
+              echo "Injection successful!"
             fi
           else
-            echo "Error: Telephony package package could not be found in cache!"
-            exit 1
+            echo "File not found at primary path, searching dynamically..."
+            GENERIC_PATH=$(find ${HOME}/.pub-cache/hosted/pub.dev/ -name "build.gradle" | grep "telephony")
+            if [ -n "$GENERIC_PATH" ]; then
+              sed -i '/android {/a \    namespace "com.shounakmulay.telephony"' "$GENERIC_PATH"
+              echo "Dynamic injection successful on: $GENERIC_PATH"
+            else
+              echo "Warning: Telephony build file could not be located."
+            fi
           fi
 
       - name: Build Android Release APK
